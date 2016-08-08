@@ -1,6 +1,6 @@
 # DDA test
 
-amap = [[0 for i in range(0, 20)] for j in range(0, 20)]
+amap = [[0 for i in range(0, 13)] for j in range(0, 13)]
 
 
 def dda(start, end, amap):
@@ -10,15 +10,16 @@ def dda(start, end, amap):
 
     x = end[0] - start[0]
     y = end[1] - start[1]
-
+    print x,y
     if y == 0:
         slope = 1
     else:
         slope = abs(float(x) / y)
 
     if slope > 1:
-        flip_xy = True
+        exchange_xy = True
         x, y = y, x
+        slope = abs(float(x)/y )
 
     if x < 0:
         flip_x = True
@@ -36,18 +37,19 @@ def dda_impl(start, x_diff, y_diff, slope, amap, exchange_xy, flip_x, flip_y):
     x = 0
     y = 0
     while y <= y_diff:
+        print "start" ,x,y
         xw = x
         yw = y
-
+        print xw, yw
         if flip_x:
             xw = -xw
         if flip_y:
             yw = -yw
-
+        print xw, yw
         if exchange_xy:
             xw = y
             yw = x
-
+        print "write", yw + start[1],xw + start[0]
         amap[yw + start[1]][xw + start[0]] = 1
         aa += slope
         if aa > 1:
@@ -56,7 +58,7 @@ def dda_impl(start, x_diff, y_diff, slope, amap, exchange_xy, flip_x, flip_y):
         y += 1
 
 
-dda((10, 0), (5, 5), amap)
+dda((11, 5), (1, 1), amap)
 
 output = ""
 for i in amap:
