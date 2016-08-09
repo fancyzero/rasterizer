@@ -1,9 +1,12 @@
 # DDA test
+from PIL import Image
+import math
 
-amap = [[0 for i in range(0, 13)] for j in range(0, 13)]
+img = Image.new( "RGB",(32,32) )
+amap = img.load()
 
 
-def dda(start, end, amap):
+def dda(start, end, amap, color):
     exchange_xy = False
     flip_x = False
     flip_y = False
@@ -28,29 +31,24 @@ def dda(start, end, amap):
         flip_y = True
         y=-y
 
-    dda_impl(start, x, y, slope, amap, exchange_xy, flip_x, flip_y)
+    dda_impl(start, x, y, slope, amap, exchange_xy, flip_x, flip_y, color)
 
 
-def dda_impl(start, x_diff, y_diff, slope, amap, exchange_xy, flip_x, flip_y):
+def dda_impl(start, x_diff, y_diff, slope, amap, exchange_xy, flip_x, flip_y,color):
     print start, x_diff,y_diff,slope, exchange_xy,flip_x,flip_x
     aa = slope
     x = 0
     y = 0
     while y <= y_diff:
-        print "start" ,x,y
         xw = x
         yw = y
-        print xw, yw
         if flip_x:
             xw = -xw
         if flip_y:
             yw = -yw
-        print xw, yw
         if exchange_xy:
-            xw = y
-            yw = x
-        print "write", yw + start[1],xw + start[0]
-        amap[yw + start[1]][xw + start[0]] = 1
+            xw,yw = yw,xw
+        amap[yw + start[1],xw + start[0]] = color
         aa += slope
         if aa > 1:
             aa -= 1
@@ -58,15 +56,19 @@ def dda_impl(start, x_diff, y_diff, slope, amap, exchange_xy, flip_x, flip_y):
         y += 1
 
 
-dda((11, 5), (1, 1), amap)
-
-output = ""
-for i in amap:
-    for j in i:
-        if j == 0:
-            output += "0"
-        else:
-            output += "*"
-    output += "\n"
-
-print output
+for i in range(0,16):
+    x=math.sin(i*3.1415926/8)*10+16
+    y=math.cos(i*3.1415926/8)*10+16
+    dda((16, 16), (x, y), amap,(int(128*i/16.0),int(128*i/16.0),int(128*i/16.0)))
+img.show()
+#
+# output = ""
+# for i in amap:
+#     for j in i:
+#         if j == 0:
+#             output += "0"
+#         else:
+#             output += "*"
+#     output += "\n"
+#
+# print output
