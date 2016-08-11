@@ -2,8 +2,8 @@
 from PIL import Image
 import math
 
-picture_width = 512
-picture_height = 512
+picture_width = 64
+picture_height = 64
 img = Image.new("RGB", (picture_width, picture_height))
 pixels = img.load()
 
@@ -32,7 +32,7 @@ def dda(start, end, a_map, color):
         flip_y = True
         y = -y
 
-    dda_impl(start, x, y, a_map, exchange_xy, flip_x, flip_y, color)
+    dda_impl(start, int(x), int(y), a_map, exchange_xy, flip_x, flip_y, color)
 
 
 def dda_impl(start, x_diff, y_diff, a_map, exchange_xy, flip_x, flip_y, color):
@@ -57,15 +57,31 @@ def dda_impl(start, x_diff, y_diff, a_map, exchange_xy, flip_x, flip_y, color):
         x += 1
 
 
-for i in range(1, 16):
-    xe = (math.sin(i * 3.1415926 / 8) * 21 + picture_width / 2)
-    ye = (math.cos(i * 3.1415926 / 8) * 21 + picture_height / 2)
-    xe = int(xe)
-    ye = int(ye)
-    dda((picture_width / 2, picture_height / 2), (xe, ye), pixels,
-        (int(128 * i / 16.0) + 128, int(128 * i / 16.0) + 128, int(128 * i / 16.0) + 128))
-    if i == 1:
-        break
+def dda_triangle(v1, v2, v3, a_map, color):
+    dda(v1[0:2], v2[0:2], a_map, color)
+    dda(v2[0:2], v3[0:2], a_map, color)
+    dda(v3[0:2], v1[0:2], a_map, color)
+    pass
+
+
+def dda_triangle_impl(v1, v2, v3, color):
+    pass
+
+def test_draw_mesh():
+    dda_triangle((4,4),(12,22), (51,31), pixels, (256,0,0))
+    dda_triangle((12,22), (51,31),(10,41), pixels, (0,256,0))
+
+
+
+def test_draw_star():
+     for i in range(0, 16):
+        xe = (math.sin(i * 3.1415926 / 8) * 21 + picture_width / 2)
+        ye = (math.cos(i * 3.1415926 / 8) * 21 + picture_height / 2)
+        dda((picture_width / 2, picture_height / 2), (int(xe), int(ye)), pixels,
+            (int(128 * i / 16.0) + 128, int(128 * i / 16.0) + 128, int(128 * i / 16.0) + 128))
+
+test_draw_mesh()
+
 img.show()
 #
 # output = ""
@@ -79,6 +95,3 @@ img.show()
 #
 # print output
 
-
-
-print i
