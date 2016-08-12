@@ -11,71 +11,64 @@ img = Image.new("RGB", (picture_width, picture_height))
 pixels = img.load()
 
 
-def walk_through(node, intent="  "):
-    """
-    walk through all child nodes and print information
-    :param node: root node
-    :param intent:
-    """
-    assert isinstance(node, FbxNode)
-    print intent + node.GetName() + "'" + node.GetTypeName() + "'"
-    cnt = node.GetChildCount()
+class LineDDA:
+    def __init__(self, _start, _end):
+        self.start = _start
+        self.end = _end
+        self.exchange_xy = False
+        self.flip_x = False
+        self.flip_y = False
+        self.delta_x = self.end[0] - self.start[0]
+        self.delta_y = self.end[1] - self.start[1]
+        if self.delta_x == 0:
+            slope = 1
+        else:
+            slope = abs(float(self.delta_y) / self.delta_x)
 
-    intent += "  "
-    for i in range(0, cnt):
-        walk_through(node.GetChild(i), intent)
+        if slope >= 1:
+            self.exchange_xy = True
+            self.delta_x, self.delta_y = self.delta_y, self.delta_x
+
+        if self.delta_x < 0:
+            self.flip_x = True
+            self.delta_x = -self.delta_x
+        if self.delta_y < 0:
+            self.flip_y = True
+            self.delta_y = -self.delta_y
+
+        self.error = self.delta_x / 2
+        self.x = 0
+        self.y = 0
+
+    def walk(self):
+        if self.x <= self.delta_x:
+            xw = self.x
+            yw = self.y
+            if self.flip_x:
+                xw = -xw
+            if self.flip_y:
+                yw = -yw
+            if self.exchange_xy:
+                xw, yw = yw, xw
+
+            self.error -= self.delta_y
+            if self.error < 0:
+                self.error += self.delta_x
+                self.y += 1
+            self.x += 1
+            return True, xw + self.start[0], yw + self.start[1]
+        else:
+            return False,0,0
 
 
 def dda(start, end, a_map, color):
-    exchange_xy = False
-    flip_x = False
-    flip_y = False
-
-    x = end[0] - start[0]
-    y = end[1] - start[1]
-
-    if x == 0:
-        slope = 1
-    else:
-        slope = abs(float(y) / x)
-
-    if slope >= 1:
-        exchange_xy = True
-        x, y = y, x
-
-    if x < 0:
-        flip_x = True
-        x = -x
-    if y < 0:
-        flip_y = True
-        y = -y
-
-    dda_impl(start, int(x), int(y), a_map, exchange_xy, flip_x, flip_y, color)
-
-
-def dda_impl(start, x_diff, y_diff, a_map, exchange_xy, flip_x, flip_y, color):
-    error = x_diff / 2
-    x = 0
-    y = 0
-    while x <= x_diff:
-        xw = x
-        yw = y
-        if flip_x:
-            xw = -xw
-        if flip_y:
-            yw = -yw
-        if exchange_xy:
-            xw, yw = yw, xw
-        try:
-            a_map[xw + start[0], yw + start[1]] = color
-        except IndexError:
-            pass
-
-        error -= y_diff
-        if error < 0:
-            error += x_diff
-            y += 1
-        x += 1
+    dda = LineDDA(start,end)
+    while True:
+        go, x, y = dda.walk()
+        if go:
+            a_map[x,y] = color
+        else:
+            break
 
 
 def dda_triangle(v1, v2, v3, a_map, color):
@@ -134,7 +127,6 @@ converter = FbxCommon.FbxGeometryConverter(mgr)
 ret = FbxCommon.LoadScene(mgr, scene, "d:\\monkey.fbx")
 converter.Triangulate(scene, False)
 root = scene.GetRootNode()
-walk_through(root)
 mesh = root.GetChild(0)
 attr_type = mesh.GetNodeAttribute().GetAttributeType()
 
@@ -153,11 +145,6 @@ proj_matrix = numpy.matrix([[n / 1, 0., 0., 0.],
                             [0., 0., -1., 0.]])
 
 mvp = model_matrix * proj_matrix
-
-print "=====matrix======"
-print proj_matrix
-print "=====matrix======\n\n\n"
-
 if attr_type == FbxCommon.FbxNodeAttribute.eMesh:
     test_draw_mesh(mesh.GetMesh(), pixels, mvp)
 
