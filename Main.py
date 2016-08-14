@@ -1,14 +1,14 @@
 # DDA test
-from PIL import Image
+
 import math
 from fbx import *
 import FbxCommon
-import numpy
+import numpy as np
+from Tkinter import *
+from PIL import ImageTk, Image
+import time
 
-picture_width = 512
-picture_height = 512
-img = Image.new("RGB", (picture_width, picture_height))
-pixels = img.load()
+
 
 
 class LineDDA:
@@ -72,6 +72,8 @@ def dda(start, end, a_map, color):
 
 
 def dda_triangle(v1, v2, v3, a_map, color):
+    #find master edge
+
     dda(v1[0:2], v2[0:2], a_map, color)
     dda(v2[0:2], v3[0:2], a_map, color)
     dda(v3[0:2], v1[0:2], a_map, color)
@@ -86,10 +88,9 @@ def fbx_vector_to_vector3(fbxv):
 
 
 def matrix_transform_vector3(mat, v):
-    oldv = v
-    v = numpy.append(v, 1)
+    v = np.append(v, 1)
     v = (v * mat)
-    v = (numpy.array(v)).flatten()
+    v = (np.array(v)).flatten()
     # perspective divid
     v = v[0:3] / v[3]
     # viewport transform
@@ -100,17 +101,18 @@ def matrix_transform_vector3(mat, v):
 
 def test_draw_mesh(in_mesh, a_map, matrix):
     verts = in_mesh.GetControlPoints()
+    verts = [fbx_vector_to_vector3(v) for v in verts]
+    verts = [matrix_transform_vector3(matrix,v) for v in verts]
+
 
     for i in range(in_mesh.GetPolygonCount()):
         p1 = in_mesh.GetPolygonVertex(i, 0)
         p2 = in_mesh.GetPolygonVertex(i, 1)
         p3 = in_mesh.GetPolygonVertex(i, 2)
-        p1 = fbx_vector_to_vector3(verts[p1])
-        p2 = fbx_vector_to_vector3(verts[p2])
-        p3 = fbx_vector_to_vector3(verts[p3])
-        p1 = matrix_transform_vector3(matrix, p1)
-        p2 = matrix_transform_vector3(matrix, p2)
-        p3 = matrix_transform_vector3(matrix, p3)
+        p1 = verts[p1]
+        p2 = verts[p2]
+        p3 = verts[p3]
+
         dda_triangle(p1, p2, p3, a_map, (255, 0, 0))
 
 
@@ -124,7 +126,7 @@ def test_draw_star():
 
 mgr, scene = FbxCommon.InitializeSdkObjects()
 converter = FbxCommon.FbxGeometryConverter(mgr)
-ret = FbxCommon.LoadScene(mgr, scene, "d:\\monkey.fbx")
+ret = FbxCommon.LoadScene(mgr, scene, "monkey.fbx")
 converter.Triangulate(scene, False)
 root = scene.GetRootNode()
 mesh = root.GetChild(0)
@@ -134,18 +136,44 @@ fov = 90.0
 n = near_plane = 0.1
 f = far_plane = 1000
 
-model_matrix = numpy.matrix([[1., 0., 0., 0.],
-                             [0., 1., 0., 0.],
-                             [0., 0., 1., 0.],
-                             [0., 0., 2., 1]])
+picture_width = 512
+picture_height = 512
+img = None
+fasfda = 512
 
-proj_matrix = numpy.matrix([[n / 1, 0., 0., 0.],
-                            [0., n / 1, 0., 0.],
-                            [0., 0., -(f + n) / (f - n), -2.0 * f * n / (f - n)],
-                            [0., 0., -1., 0.]])
+rot = 10.
+def my_update(whata):
+    now = time.time()*10
+    theta = np.radians(now)
+    c, s = np.cos(theta), np.sin(theta)
+    Rz = np.matrix(((c,-s,0,0),(s,c,0,0),(0,0,1,0),(0,0,0,1)))
+    Ry = np.matrix(((c,0,s,0),(0,1,0,0),(-s,0,c,0),(0,0,0,1)))
 
-mvp = model_matrix * proj_matrix
-if attr_type == FbxCommon.FbxNodeAttribute.eMesh:
+    model_matrix = np.matrix([[1, 0., 0., 0.],
+                                 [0., 1., 0., 0.],
+                                 [0., 0., 1., 0.],
+                                 [0., 0., 3., 1]])
+
+    proj_matrix = np.matrix([[n / 1, 0., 0., 0.],
+                                [0., n / 1, 0., 0.],
+                                [0., 0., -(f + n) / (f - n), -2.0 * f * n / (f - n)],
+                                [0., 0., -1., 0.]])
+
+
+    img = Image.new("RGB", (picture_width, picture_height))
+    pixels = img.load()
+    mvp =  Rz * Ry * model_matrix* proj_matrix
     test_draw_mesh(mesh.GetMesh(), pixels, mvp)
+    imgtk = ImageTk.PhotoImage(img)
+    panel.configure(image = imgtk)
+    panel.image = imgtk
 
-img.show()
+
+root = Tk()
+imgtk = ImageTk.PhotoImage(Image.new("RGB", (picture_width, picture_height)))
+panel = Label(root, image = imgtk)
+panel.pack(side = "bottom", fill = "both", expand = "yes")
+root.bind("<Return>", my_update)
+root.mainloop()
+
+
